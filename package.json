@@ -14,5 +14,10 @@
     "hook"
   ],
   "author": "chev@chevtek.io",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "react": "^17.0.2",
+    "typescript": "^4.4.3"
+  }
 }
