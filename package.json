@@ -4,7 +4,8 @@
   "description": "A simple utility for building state container hooks in React.",
   "main": "./build/index.js",
   "scripts": {
-    "tsc": "tsc"
+    "install": "npm run build",
+    "build": "tsc"
   },
   "keywords": [
     "react",
