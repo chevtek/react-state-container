@@ -1,31 +1,18 @@
-import StateContainer from "./index";
+import createStateContainer from "./index";
 
-const myState = new StateContainer("MyState");
+const state = {
+  nums: [] as number[],
+  msg: "Hello",
+  thing: true
+};
 
-myState.defaultState({
-  nums: [] as number[]
+export const { hook: useMyState, Provider: MyStateProvider } = createStateContainer("MyState", state, {
+  RESET_NUMS: () => ({ nums: [] }),
+
+  ADD_NUM: ({ nums }, num: number) => {
+    nums.push(num);
+    return { nums };
+  },
+
+  SET_NUMS: ({}, nums: number[]) => ({ nums })
 });
-
-console.log(myState.state);
-
-myState.actionHandler(
-  "RESET_NUMS",
-  () => ({ nums: [] })
-);
-
-myState.actionHandler(
-  "ADD_NUM",
-  ({ nums }, num: number) => ({ nums: [...nums, num] }) 
-);
-
-myState.actionHandler(
-  "SET_NUMS",
-  ({}, nums: number[]) => ({ nums })
-);
-
-const {
-  Provider: MyStateProvider,
-  useStateContainer: useMyState
-} = myState;
-
-export { MyStateProvider, useMyState };
