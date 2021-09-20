@@ -1,7 +1,7 @@
 import React, { useReducer, useContext, ReactNode } from "react";
 import _cloneDeep from "lodash/cloneDeep";
 
-type GenericActionHandler<S, P> = (state: S, payload: P) => Partial<S> | void;
+export type GenericActionHandler<S, P> = (state: S, payload: P) => Partial<S> | void;
 
 type Config<S, AH extends Record<string, GenericActionHandler<S, unknown>>> = {
   name: string;
