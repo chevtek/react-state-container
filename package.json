@@ -2,7 +2,7 @@
   "name": "@chevtek/react-state-container",
   "version": "1.0.3",
   "description": "A simple utility for building state container hooks in React.",
-  "main": "./build/index.jsx",
+  "main": "./build/index.js",
   "scripts": {
     "build": "npm run clean && tsc",
     "clean": "rimraf ./build",
