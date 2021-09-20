@@ -23,7 +23,7 @@ type TypePayloadPair<AH> = {
     : [K, Actions<AH>[K]];
 }[keyof AH];
 
-type Dispatch<AH> = (...args: TypePayloadPair<AH>) => void;
+type Dispatch<AH> = <A extends Actions<AH>, T extends keyof AH, P extends A[T]>(type: T, ...payload: (P extends null | undefined ? [] : [P])) => void;
 
 type StateContainer<S, AH> = {
   Provider: React.FC<{ defaultState?: S }>;
@@ -31,7 +31,9 @@ type StateContainer<S, AH> = {
     state: S;
     dispatch: Dispatch<AH>;
   };
+  dispatch: Dispatch<AH>
 };
+
 
 export default function createStateContainer<
   S,
@@ -49,7 +51,7 @@ export default function createStateContainer<
     | undefined
   >(undefined);
 
-  function reducer(state: S, [type, payload]: TypePayloadPair<AH>): S {
+  function reducer <T extends keyof AH, P = Actions<AH>[T]>(state: S, [type, payload]: [T, P]): S {
     const stateClone = _cloneDeep(state);
     const newState = actionHandlers[type](stateClone, payload);
     if (!newState) return state;
@@ -67,7 +69,7 @@ export default function createStateContainer<
       reducer,
       defaultState ?? initialState
     );
-    const dispatch: Dispatch<AH> = (...args) => reducerDispatch(args);
+    const dispatch: Dispatch<AH> = (type, payload) => reducerDispatch([type, payload]);
 
     return (
       <Context.Provider value={{ state, dispatch }}>
@@ -86,6 +88,7 @@ export default function createStateContainer<
 
   return {
     Provider,
-    useStateContainer
+    useStateContainer,
+    dispatch: (type, payload) => { console.log(type, payload); }
   };
 }
