@@ -1,5 +1,6 @@
-import React, { useReducer, useContext, ReactNode } from "react"
-import _cloneDeep from "lodash/cloneDeep"
+import React, { useReducer, useContext, ReactNode } from "react";
+import _cloneDeep from "lodash/cloneDeep";
+import _merge from "lodash/merge";
 
 type GenericActionHandler<State, Payload> = (state: State, payload: Payload) => Partial<State> | void;
 
@@ -32,7 +33,14 @@ type StateContainer<State, ActionHandlers, Helpers> = [
     helpers: Helpers
   }
 ];
-
+/**
+ * 
+ * @param name 
+ * @param initialState 
+ * @param actionHandlers 
+ * @param helperFunction 
+ * @returns 
+ */
 const buildContainer = <
   State extends {},
   ActionHandlers extends Record<string, GenericActionHandler<State, any>>,
@@ -49,12 +57,12 @@ const buildContainer = <
     const stateClone = _cloneDeep(state);
     const newState = actionHandlers[type](stateClone, payload);
     if (!newState) return state;
-    return { ...stateClone, ...newState };
+    return _merge({}, stateClone, newState);
   };
 
   const ContainerProvider = ({ children, defaultState }: { children?: ReactNode, defaultState?: State }) => {
     const [state, reducerDispatch] = useReducer(reducer, defaultState ?? initialState);
-    const dispatch: GenericDispatch<ActionHandlers> = (type, ...payload) => reducerDispatch([type, payload]);
+    const dispatch: GenericDispatch<ActionHandlers> = (type, payload) => reducerDispatch([type, payload]);
     const helpers = (helperFunction?.(dispatch) ?? {}) as ReturnType<HelperFunc>;
     return (
       <ContainerContext.Provider value={{ state, dispatch, helpers }}>
