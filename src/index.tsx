@@ -1,6 +1,4 @@
 import React, { useReducer, useContext, ReactNode } from "react";
-import _cloneDeep from "lodash/cloneDeep";
-import _merge from "lodash/merge";
 
 type GenericActionHandler<State, Payload> = (state: State, payload: Payload) => Partial<State> | void;
 
@@ -33,14 +31,7 @@ type StateContainer<State, ActionHandlers, Helpers> = [
     helpers: Helpers
   }
 ];
-/**
- * 
- * @param name 
- * @param initialState 
- * @param actionHandlers 
- * @param helperFunction 
- * @returns 
- */
+
 const buildContainer = <
   State extends {},
   ActionHandlers extends Record<string, GenericActionHandler<State, any>>,
@@ -54,10 +45,10 @@ const buildContainer = <
   } | undefined>(undefined);
 
   const reducer = (state: State, [type, payload]: TypePayloadPair<ActionHandlers>) => {
-    const stateClone = _cloneDeep(state);
+    const stateClone = { ...state };
     const newState = actionHandlers[type](stateClone, payload);
     if (!newState) return state;
-    return _merge({}, stateClone, newState);
+    return { ...stateClone, ...newState };
   };
 
   const ContainerProvider = ({ children, defaultState }: { children?: ReactNode, defaultState?: State }) => {
