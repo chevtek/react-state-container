@@ -12,7 +12,7 @@ declare type StateContainer<State, ActionHandlers, Helpers> = [
     useStateContainer: () => {
         state: State;
         dispatch: GenericDispatch<ActionHandlers>;
-        helpers?: Helpers;
+        helpers: Helpers;
     }
 ];
 declare const createStateContainer: (name: string) => {

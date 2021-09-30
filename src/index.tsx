@@ -29,7 +29,7 @@ type StateContainer<State, ActionHandlers, Helpers> = [
   useStateContainer: () => {
     state: State,
     dispatch: GenericDispatch<ActionHandlers>,
-    helpers?: Helpers
+    helpers: Helpers
   }
 ];
 
@@ -42,7 +42,7 @@ const buildContainer = <
   const ContainerContext = React.createContext<{
     state: State,
     dispatch: GenericDispatch<ActionHandlers>,
-    helpers?: ReturnType<HelperFunc>
+    helpers: ReturnType<HelperFunc>
   } | undefined>(undefined);
 
   const reducer = (state: State, [type, payload]: TypePayloadPair<ActionHandlers>) => {
@@ -55,7 +55,7 @@ const buildContainer = <
   const ContainerProvider = ({ children, defaultState }: { children?: ReactNode, defaultState?: State }) => {
     const [state, reducerDispatch] = useReducer(reducer, defaultState ?? initialState);
     const dispatch: GenericDispatch<ActionHandlers> = (type, ...payload) => reducerDispatch([type, payload]);
-    const helpers = helperFunction?.(dispatch) as ReturnType<HelperFunc> | undefined;
+    const helpers = (helperFunction?.(dispatch) ?? {}) as ReturnType<HelperFunc>;
     return (
       <ContainerContext.Provider value={{ state, dispatch, helpers }}>
         {children}

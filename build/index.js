@@ -46,8 +46,9 @@ var buildContainer = function (name, initialState, actionHandlers, helperFunctio
         return __assign(__assign({}, stateClone), newState);
     };
     var ContainerProvider = function (_a) {
+        var _b;
         var children = _a.children, defaultState = _a.defaultState;
-        var _b = (0, react_1.useReducer)(reducer, defaultState !== null && defaultState !== void 0 ? defaultState : initialState), state = _b[0], reducerDispatch = _b[1];
+        var _c = (0, react_1.useReducer)(reducer, defaultState !== null && defaultState !== void 0 ? defaultState : initialState), state = _c[0], reducerDispatch = _c[1];
         var dispatch = function (type) {
             var payload = [];
             for (var _i = 1; _i < arguments.length; _i++) {
@@ -55,7 +56,7 @@ var buildContainer = function (name, initialState, actionHandlers, helperFunctio
             }
             return reducerDispatch([type, payload]);
         };
-        var helpers = helperFunction === null || helperFunction === void 0 ? void 0 : helperFunction(dispatch);
+        var helpers = ((_b = helperFunction === null || helperFunction === void 0 ? void 0 : helperFunction(dispatch)) !== null && _b !== void 0 ? _b : {});
         return (react_1.default.createElement(ContainerContext.Provider, { value: { state: state, dispatch: dispatch, helpers: helpers } }, children));
     };
     var useStateContainer = function () {
