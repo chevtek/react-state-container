@@ -1,6 +1,8 @@
 import React, { useReducer, useContext, ReactNode } from "react";
+import { produce, Draft } from "immer";
+export * from "immer";
 
-type GenericActionHandler<State, Payload> = (state: State, payload: Payload) => Partial<State> | void;
+type GenericActionHandler<State, Payload> = (state: State, payload: Payload) => Draft<State> | void;
 
 type GenericHelper<Payload> = (payload: Payload) => Promise<void> | void;
 
@@ -44,12 +46,10 @@ const buildContainer = <
     helpers: ReturnType<HelperFunc>
   } | undefined>(undefined);
 
-  const reducer = (state: State, [type, payload]: TypePayloadPair<ActionHandlers>) => {
-    const stateClone = { ...state };
-    const newState = actionHandlers[type](stateClone, payload);
-    if (!newState) return state;
-    return { ...stateClone, ...newState };
-  };
+  const reducer = (
+    state: State,
+    [type, payload]: TypePayloadPair<ActionHandlers>
+  ) => produce<State>(state, draft => actionHandlers[type](draft, payload));
 
   const ContainerProvider = ({ children, defaultState }: { children?: ReactNode, defaultState?: State }) => {
     const [state, reducerDispatch] = useReducer(reducer, defaultState ?? initialState);
@@ -75,7 +75,7 @@ const buildContainer = <
 
 const createStateContainer = (name: string) => ({
 
-  setState: <State extends {}>(initialState: State) => ({
+  setState: <State extends object>(initialState: State) => ({
 
     setActions: <ActionHandlers extends Record<string, GenericActionHandler<State, any>>>(actionHandlers: ActionHandlers) => ({
 

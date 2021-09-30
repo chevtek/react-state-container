@@ -231,4 +231,4 @@ export default function Home ({ thingId }) {
 }
 ```
 
-Helpers don't *have* to be asynchronous but it is their most common usage.
+Helpers don't *have* to be asynchronous but it is their most common usage by far. Feel free to get creative within the `.setHelpers(dispatch => { /*...*/ })` space!
