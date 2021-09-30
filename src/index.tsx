@@ -49,7 +49,11 @@ const buildContainer = <
   const reducer = (
     state: State,
     [type, payload]: TypePayloadPair<ActionHandlers>
-  ) => produce<State>(state, draft => actionHandlers[type](draft, payload));
+  ) => {
+    const newState = produce<State>(state, draft => actionHandlers[type](draft, payload));
+    if (state === newState) return state;
+    return { ...state, ...newState };
+  }
 
   const ContainerProvider = ({ children, defaultState }: { children?: ReactNode, defaultState?: State }) => {
     const [state, reducerDispatch] = useReducer(reducer, defaultState ?? initialState);
@@ -75,7 +79,7 @@ const buildContainer = <
 
 const createStateContainer = (name: string) => ({
 
-  setState: <State extends object>(initialState: State) => ({
+  setState: <State extends {}>(initialState: State) => ({
 
     setActions: <ActionHandlers extends Record<string, GenericActionHandler<State, any>>>(actionHandlers: ActionHandlers) => ({
 

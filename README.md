@@ -44,17 +44,13 @@ export const [
   })
   .setActions({
 
-    SIGN_IN: (state) => ({
-      user: {
-        authenticated: true
-      }
-    }),
+    SIGN_IN: ({ user }) => {
+      user.authenticated = true;
+    },
 
-    SIGN_OUT: (state) => ({
-      user: {
-        authenticated: false
-      }
-    }),
+    SIGN_OUT: (state) => {
+      user.authenticated = false;
+    },
 
     /**
      * Note here that "uiTheme" is explicitly typed to "string"
@@ -191,7 +187,7 @@ This module provides a clean way to define *helper functions*. If you're familia
   .setActions({
 
     SET_ACTIVE_THING: (state, thing: Thing) => {
-      return { activeThing: thing };
+      state.activeThing = thing;
     }
 
   })
@@ -232,3 +228,105 @@ export default function Home ({ thingId }) {
 ```
 
 Helpers don't *have* to be asynchronous but it is their most common usage by far. Feel free to get creative within the `.setHelpers(dispatch => { /*...*/ })` space!
+
+## What if I want to compare object references in my action handler?
+
+Say you have a `state` with an object on it like so:
+
+```ts
+const state = {
+  user: {
+    username: "chev",
+    favoriteColor: "green"
+  }
+};
+```
+
+This module utilizes the [immer](https://immerjs.github.io/immer/) utility to handle state immutability. Which can quickly get [complicated](https://reactjs.org/docs/update.html) to handle on our own. What this means is that the `state` object you are interacting with in your action handlers is not the actual state object. This can sometimes be a hurdle if you're trying to compare object references. For example:
+
+```ts
+// src/hooks/useMyContainer.ts
+
+type State = {
+  user: {
+    username: string,
+    favoriteColor: string
+  }
+};
+
+type User = State["user"];
+
+// ...
+
+  .setState({
+    user: {
+      username: "chev",
+      favoriteColor: "green"
+    }
+  } as State)
+  .setActions({
+
+    SET_USER: (state, newUser: User) => {
+      if (newUser === state.user) return; // state.user !== newUser here!!!
+    }
+
+  })
+
+// src/components/Home.tsx
+
+// ...
+
+const { state, dispatch } = useMyContainer();
+// Passing in the existing user to SET_USER
+dispatch("SET_USER", state.user);
+```
+
+This is expected as `state` is supposed to be [immutable](https://en.wikipedia.org/wiki/Immutable_object#:~:text=In%20object%2Doriented%20and%20functional,modified%20after%20it%20is%20created.), but there is a way to get reference to the original `state` object if you really need to. The immer package comes with a utility function called `original` for exactly that purpose, and this module also re-exports all available utilities from immer :D
+
+```ts
+// src/hooks/useMyContainer.ts
+
+import { original } from "@chevtek/react-state-container";
+
+SET_USER: (state, newUser: User) => {
+  if (newUser === original(state.user)) return; // Now this returns true as expected :)
+}
+
+// src/components/Home.tsx
+
+const { state, dispatch } = useMyContainer();
+// Passing in the existing user to SET_USER
+dispatch("SET_USER", state.user);
+```
+
+For a list of all available immer utilities you visit their documentation [here](https://immerjs.github.io/immer/api).
+
+## Wait, I can just edit the `state` variable directly in my action handlers? I thought you just said `state` was immutable?
+
+Yep, you may have noticed two patterns mixed and matched throughout these examples. Some action handlers just modify properties on the passed in `state` object while other action handlers return new objects containing the properties they intend to modify on `state`.
+
+```ts
+SET_USER: (state, newUser: User) => {
+  state.user = newUser;
+}
+```
+
+vs
+
+```ts
+SET_USER: (state, newUser: User) => {
+  return { user: newUser };
+}
+```
+
+Both patterns are valid. The immer utility provides our action handlers with a [draft state](https://immerjs.github.io/immer/update-patterns) that acts as a proxy for the real `state`. You can modify it to your heart's content and it will not negatively effect `state` immutability. Yay!
+
+With that said, it is still valid to return an object that represents a _partial_ `state`. The immer utility considers values returned as an overwrite of `state` but this state container module takes that value and merges it into a new object over the top of the original `state` (e.g. `Object.assign({}, oldState, newState)`). This allows for shorthand inline action handler patterns like this:
+
+```ts
+SET_USER: (state, newUser: User) => ({ user: newUser })
+```
+
+---
+
+### Powered by [Chevtek](https://chevtek.io)
