@@ -1,23 +1,29 @@
 import React from "react";
-declare type GenericActionHandler<S, P> = (state: S, payload: P) => Partial<S> | void;
-declare type Config<S, AH extends Record<string, GenericActionHandler<S, unknown>>> = {
-    name: string;
-    initialState: S;
-    actionHandlers: AH;
+declare type GenericActionHandler<State, Payload> = (state: State, payload: Payload) => Partial<State> | void;
+declare type GenericHelper<Payload> = (payload: Payload) => Promise<void> | void;
+declare type Actions<ActionHandlers> = {
+    [Key in keyof ActionHandlers]: ActionHandlers[Key] extends GenericActionHandler<any, infer Payload> ? unknown extends Payload ? never : Payload : never;
 };
-declare type Actions<AH> = {
-    [K in keyof AH]: AH[K] extends GenericActionHandler<any, infer P> ? unknown extends P ? never : P : never;
-};
-declare type Dispatch<AH> = <A extends Actions<AH>, T extends keyof AH, P extends A[T]>(type: T, ...payload: (P extends undefined ? [] : [P])) => void;
-declare type StateContainer<S, AH> = {
-    Provider: React.FC<{
-        defaultState?: S;
-    }>;
+declare type GenericDispatch<ActionHandlers> = <Action extends Actions<ActionHandlers>, Key extends keyof ActionHandlers, Payload extends Action[Key]>(type: Key, ...payload: (Payload extends undefined ? [] : [Payload])) => void;
+declare type StateContainer<State, ActionHandlers, Helpers> = [
+    ContainerProvider: React.FC<{
+        defaultState?: State;
+    }>,
     useStateContainer: () => {
-        state: S;
-        dispatch: Dispatch<AH>;
+        state: State;
+        dispatch: GenericDispatch<ActionHandlers>;
+        helpers?: Helpers;
+    }
+];
+declare const createStateContainer: (name: string) => {
+    setState: <State extends {}>(initialState: State) => {
+        setActions: <ActionHandlers extends Record<string, GenericActionHandler<State, any>>>(actionHandlers: ActionHandlers) => {
+            build: () => StateContainer<State, ActionHandlers, Record<string, GenericHelper<any>>>;
+            setHelpers: <HelperFunc extends (dispatch: GenericDispatch<ActionHandlers>) => Record<string, GenericHelper<any>>>(helperFunction: HelperFunc) => {
+                build: () => StateContainer<State, ActionHandlers, ReturnType<HelperFunc>>;
+            };
+        };
     };
 };
-export default function createStateContainer<S, AH extends Record<string, GenericActionHandler<S, any>>>({ name, initialState, actionHandlers }: Config<S, AH>): StateContainer<S, AH>;
-export {};
+export default createStateContainer;
 //# sourceMappingURL=index.d.ts.map

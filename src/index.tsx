@@ -1,92 +1,157 @@
-import React, { useReducer, useContext, ReactNode } from "react";
-import _cloneDeep from "lodash/cloneDeep";
+import React, { useReducer, useContext, ReactNode } from "react"
+import _cloneDeep from "lodash/cloneDeep"
 
-export type GenericActionHandler<S, P> = (state: S, payload: P) => Partial<S> | void;
+type GenericActionHandler<State, Payload> = (state: State, payload: Payload) => Partial<State> | void;
 
-type Config<S, AH extends Record<string, GenericActionHandler<S, unknown>>> = {
-  name: string;
-  initialState: S;
-  actionHandlers: AH;
-};
+type GenericHelper<Payload> = (payload: Payload) => Promise<void> | void;
 
-type Actions<AH> = {
-  [K in keyof AH]: AH[K] extends GenericActionHandler<any, infer P>
-    ? unknown extends P
-      ? never
-      : P
+type Actions<ActionHandlers> = {
+  [Key in keyof ActionHandlers]: ActionHandlers[Key] extends GenericActionHandler<any, infer Payload>
+    ? unknown extends Payload
+      ? never : Payload
     : never;
 };
 
-type TypePayloadPair<AH> = {
-  [K in keyof AH]: Actions<AH>[K] extends null | undefined
-    ? [K, undefined]
-    : [K, Actions<AH>[K]];
-}[keyof AH];
+type TypePayloadPair<ActionHandlers> = {
+  [Key in keyof ActionHandlers]: Actions<ActionHandlers>[Key] extends null | undefined
+    ? [Key, undefined]
+    : [Key, Actions<ActionHandlers>[Key]];
+}[keyof ActionHandlers];
 
-type Dispatch<AH> = <A extends Actions<AH>, T extends keyof AH, P extends A[T]>(type: T, ...payload: (P extends undefined ? [] : [P])) => void;
+type GenericDispatch<ActionHandlers> = <
+  Action extends Actions<ActionHandlers>,
+  Key extends keyof ActionHandlers,
+  Payload extends Action[Key]
+>(type: Key, ...payload: (Payload extends undefined ? [] : [Payload])) => void;
 
-type StateContainer<S, AH> = {
-  Provider: React.FC<{ defaultState?: S }>;
+type StateContainer<State, ActionHandlers, Helpers> = [
+  ContainerProvider: React.FC<{ defaultState?: State }>,
   useStateContainer: () => {
-    state: S;
-    dispatch: Dispatch<AH>;
-  };
-};
+    state: State,
+    dispatch: GenericDispatch<ActionHandlers>,
+    helpers?: Helpers
+  }
+];
 
+const buildContainer = <
+  State extends {},
+  ActionHandlers extends Record<string, GenericActionHandler<State, any>>,
+  HelperFunc extends (dispatch: GenericDispatch<ActionHandlers>) => Record<string, GenericHelper<any>>
+>(name: string, initialState: State, actionHandlers: ActionHandlers, helperFunction?: HelperFunc): StateContainer<State, ActionHandlers, ReturnType<HelperFunc>> => {
 
-export default function createStateContainer<
-  S,
-  AH extends Record<string, GenericActionHandler<S, any>>
->({
-  name,
-  initialState,
-  actionHandlers
-}: Config<S, AH>): StateContainer<S, AH> {
-  const Context = React.createContext<
-    | {
-        state: S;
-        dispatch: Dispatch<AH>;
-      }
-    | undefined
-  >(undefined);
+  const ContainerContext = React.createContext<{
+    state: State,
+    dispatch: GenericDispatch<ActionHandlers>,
+    helpers?: ReturnType<HelperFunc>
+  } | undefined>(undefined);
 
-  const reducer = (state: S, [type, payload]: TypePayloadPair<AH>) => {
+  const reducer = (state: State, [type, payload]: TypePayloadPair<ActionHandlers>) => {
     const stateClone = _cloneDeep(state);
     const newState = actionHandlers[type](stateClone, payload);
     if (!newState) return state;
     return { ...stateClone, ...newState };
-  }
+  };
 
-  const Provider = ({
-    children,
-    defaultState
-  }: {
-    children?: ReactNode;
-    defaultState?: S;
-  }) => {
-    const [state, reducerDispatch] = useReducer(
-      reducer,
-      defaultState ?? initialState
-    );
-    const dispatch: Dispatch<AH> = (type, payload) => reducerDispatch([type, payload]);
-
+  const ContainerProvider = ({ children, defaultState }: { children?: ReactNode, defaultState?: State }) => {
+    const [state, reducerDispatch] = useReducer(reducer, defaultState ?? initialState);
+    const dispatch: GenericDispatch<ActionHandlers> = (type, ...payload) => reducerDispatch([type, payload]);
+    const helpers = helperFunction?.(dispatch) as ReturnType<HelperFunc> | undefined;
     return (
-      <Context.Provider value={{ state, dispatch }}>
+      <ContainerContext.Provider value={{ state, dispatch, helpers }}>
         {children}
-      </Context.Provider>
+      </ContainerContext.Provider>
     );
-  }
+  };
 
-  function useStateContainer() {
-    const context = useContext(Context);
+  const useStateContainer = () => {
+    const context = useContext(ContainerContext);
     if (context === undefined) {
       throw new Error(`use${name} must be used within a ${name}Provider`);
     }
     return context;
   }
 
-  return {
-    Provider,
-    useStateContainer
-  };
-}
+  return [ContainerProvider, useStateContainer];
+};
+
+const createStateContainer = (name: string) => ({
+
+  setState: <State extends {}>(initialState: State) => ({
+
+    setActions: <ActionHandlers extends Record<string, GenericActionHandler<State, any>>>(actionHandlers: ActionHandlers) => ({
+
+      build: () => buildContainer(name, initialState, actionHandlers),
+
+      setHelpers: <HelperFunc extends (dispatch: GenericDispatch<ActionHandlers>) => Record<string, GenericHelper<any>>>(helperFunction: HelperFunc) => ({
+
+        build: () => buildContainer(name, initialState, actionHandlers, helperFunction)
+
+      })
+
+    })
+
+  })
+
+});
+
+export default createStateContainer;
+
+// export default function createStateContainer<
+//   S,
+//   AH extends Record<string, GenericActionHandler<S, any>>,
+//   H
+// >({
+//   name,
+//   initialState,
+//   actionHandlers,
+//   helpers
+// }: Config<S, AH, H>): StateContainer<S, AH, H> {
+//   const Context = React.createContext<
+//     | {
+//         state: S;
+//         dispatch: Dispatch<AH>;
+//         helpers?: H
+//       }
+//     | undefined
+//   >(undefined);
+
+//   const reducer = (state: S, [type, payload]: TypePayloadPair<AH>) => {
+//     const stateClone = _cloneDeep(state);
+//     const newState = actionHandlers[type](stateClone, payload);
+//     if (!newState) return state;
+//     return { ...stateClone, ...newState };
+//   }
+
+//   const Provider = ({
+//     children,
+//     defaultState
+//   }: {
+//     children?: ReactNode;
+//     defaultState?: S;
+//   }) => {
+//     const [state, reducerDispatch] = useReducer(
+//       reducer,
+//       defaultState ?? initialState
+//     );
+//     const dispatch: Dispatch<AH> = (type, payload) => reducerDispatch([type, payload]);
+
+//     return (
+//       <Context.Provider value={{ state, dispatch, helpers }}>
+//         {children}
+//       </Context.Provider>
+//     );
+//   }
+
+//   function useStateContainer() {
+//     const context = useContext(Context);
+//     if (context === undefined) {
+//       throw new Error(`use${name} must be used within a ${name}Provider`);
+//     }
+//     return context;
+//   }
+
+//   return {
+//     Provider,
+//     useStateContainer
+//   };
+// }

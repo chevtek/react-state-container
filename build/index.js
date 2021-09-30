@@ -35,9 +35,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var react_1 = __importStar(require("react"));
 var cloneDeep_1 = __importDefault(require("lodash/cloneDeep"));
-function createStateContainer(_a) {
-    var name = _a.name, initialState = _a.initialState, actionHandlers = _a.actionHandlers;
-    var Context = react_1.default.createContext(undefined);
+var buildContainer = function (name, initialState, actionHandlers, helperFunction) {
+    var ContainerContext = react_1.default.createContext(undefined);
     var reducer = function (state, _a) {
         var type = _a[0], payload = _a[1];
         var stateClone = (0, cloneDeep_1.default)(state);
@@ -46,23 +45,91 @@ function createStateContainer(_a) {
             return state;
         return __assign(__assign({}, stateClone), newState);
     };
-    var Provider = function (_a) {
+    var ContainerProvider = function (_a) {
         var children = _a.children, defaultState = _a.defaultState;
         var _b = (0, react_1.useReducer)(reducer, defaultState !== null && defaultState !== void 0 ? defaultState : initialState), state = _b[0], reducerDispatch = _b[1];
-        var dispatch = function (type, payload) { return reducerDispatch([type, payload]); };
-        return (react_1.default.createElement(Context.Provider, { value: { state: state, dispatch: dispatch } }, children));
+        var dispatch = function (type) {
+            var payload = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                payload[_i - 1] = arguments[_i];
+            }
+            return reducerDispatch([type, payload]);
+        };
+        var helpers = helperFunction === null || helperFunction === void 0 ? void 0 : helperFunction(dispatch);
+        return (react_1.default.createElement(ContainerContext.Provider, { value: { state: state, dispatch: dispatch, helpers: helpers } }, children));
     };
-    function useStateContainer() {
-        var context = (0, react_1.useContext)(Context);
+    var useStateContainer = function () {
+        var context = (0, react_1.useContext)(ContainerContext);
         if (context === undefined) {
             throw new Error("use" + name + " must be used within a " + name + "Provider");
         }
         return context;
-    }
-    return {
-        Provider: Provider,
-        useStateContainer: useStateContainer
     };
-}
+    return [ContainerProvider, useStateContainer];
+};
+var createStateContainer = function (name) { return ({
+    setState: function (initialState) { return ({
+        setActions: function (actionHandlers) { return ({
+            build: function () { return buildContainer(name, initialState, actionHandlers); },
+            setHelpers: function (helperFunction) { return ({
+                build: function () { return buildContainer(name, initialState, actionHandlers, helperFunction); }
+            }); }
+        }); }
+    }); }
+}); };
 exports.default = createStateContainer;
+// export default function createStateContainer<
+//   S,
+//   AH extends Record<string, GenericActionHandler<S, any>>,
+//   H
+// >({
+//   name,
+//   initialState,
+//   actionHandlers,
+//   helpers
+// }: Config<S, AH, H>): StateContainer<S, AH, H> {
+//   const Context = React.createContext<
+//     | {
+//         state: S;
+//         dispatch: Dispatch<AH>;
+//         helpers?: H
+//       }
+//     | undefined
+//   >(undefined);
+//   const reducer = (state: S, [type, payload]: TypePayloadPair<AH>) => {
+//     const stateClone = _cloneDeep(state);
+//     const newState = actionHandlers[type](stateClone, payload);
+//     if (!newState) return state;
+//     return { ...stateClone, ...newState };
+//   }
+//   const Provider = ({
+//     children,
+//     defaultState
+//   }: {
+//     children?: ReactNode;
+//     defaultState?: S;
+//   }) => {
+//     const [state, reducerDispatch] = useReducer(
+//       reducer,
+//       defaultState ?? initialState
+//     );
+//     const dispatch: Dispatch<AH> = (type, payload) => reducerDispatch([type, payload]);
+//     return (
+//       <Context.Provider value={{ state, dispatch, helpers }}>
+//         {children}
+//       </Context.Provider>
+//     );
+//   }
+//   function useStateContainer() {
+//     const context = useContext(Context);
+//     if (context === undefined) {
+//       throw new Error(`use${name} must be used within a ${name}Provider`);
+//     }
+//     return context;
+//   }
+//   return {
+//     Provider,
+//     useStateContainer
+//   };
+// }
 //# sourceMappingURL=index.js.map

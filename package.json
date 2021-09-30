@@ -1,6 +1,6 @@
 {
   "name": "@chevtek/react-state-container",
-  "version": "1.0.7",
+  "version": "2.0.7",
   "description": "A simple utility for building state container hooks in React.",
   "main": "./build/index.js",
   "scripts": {
@@ -17,15 +17,14 @@
   ],
   "author": "chev@chevtek.io",
   "license": "MIT",
-  "dependencies": {
-    "lodash": "^4.17.21"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "react": "^17.0.2"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.173",
     "@types/react": "^17.0.21",
+    "lodash": "^4.17.21",
     "rimraf": "^3.0.2",
     "typescript": "^4.4.3"
   }
