@@ -3,7 +3,8 @@
   "compilerOptions": {
     "outDir": "./dist",
     "noEmit": false,
-    "sourceMap": false
+    "sourceMap": false,
+    "declarationMap": false
   },
   "include": ["./src"]
 }
