@@ -307,7 +307,7 @@ For a list of all available immer utilities you visit their documentation [here]
 
 Yep, the immer utility provides our action handlers with a [draft state](https://immerjs.github.io/immer/update-patterns) that acts as a proxy for the real `state`. You can modify it to your heart's content and it will not negatively effect `state` immutability. Yay!
 
-If you need to short-circuit an action simply return nothing as we did in the above example where we showed how to compare object references. By returning `void` you tell the state container that you wish to abort updating state.
+If you need to short-circuit an action simply return nothing without modifying the `state` object, as we did in the above example where we showed how to compare object references. By returning `void` you tell the state container that you wish to abort updating state.
 
 ```ts
 SET_USER_ROLE: (state, userRole: string) {
