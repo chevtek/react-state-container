@@ -1,8 +1,8 @@
 import React, { useReducer, useContext, ReactNode } from "react";
-import produce, { Draft } from "immer";
+import produce, { Draft, Immutable } from "immer";
 export * from "immer";
 
-type GenericActionHandler<State, Payload> = (state: State, payload: Payload) => Draft<Partial<State>> | void;
+type GenericActionHandler<State, Payload> = (state: Draft<State>, payload: Payload) => Draft<State> | void;
 
 type GenericHelper<Payload> = (payload: Payload) => Promise<void> | void;
 
@@ -35,7 +35,7 @@ type StateContainer<State, ActionHandlers, Helpers> = [
 ];
 
 const buildContainer = <
-  State extends Record<any, any>,
+  State extends Immutable<object>,
   ActionHandlers extends Record<string, GenericActionHandler<State, any>>,
   HelperFunc extends (dispatch: GenericDispatch<ActionHandlers>) => Record<string, GenericHelper<any>>
 >(name: string, initialState: State, actionHandlers: ActionHandlers, helperFunction?: HelperFunc): StateContainer<State, ActionHandlers, ReturnType<HelperFunc>> => {
@@ -49,11 +49,7 @@ const buildContainer = <
   const reducer = (
     state: State,
     [type, payload]: TypePayloadPair<ActionHandlers>
-  ) => {
-    const newState = produce<Partial<State>>(state, draft => actionHandlers[type](draft as Draft<State>, payload));
-    if (state === newState) return state;
-    return { ...state, ...newState };
-  }
+  ) => produce(state, draft => actionHandlers[type](draft, payload));
 
   const ContainerProvider = ({ children, defaultState }: { children?: ReactNode, defaultState?: State }) => {
     const [state, reducerDispatch] = useReducer(reducer, defaultState ?? initialState);
@@ -79,7 +75,7 @@ const buildContainer = <
 
 const createStateContainer = (name: string) => ({
 
-  setState: <State extends Record<any, any>>(initialState: State) => ({
+  setState: <State extends Immutable<object>>(initialState: State) => ({
 
     setActions: <ActionHandlers extends Record<string, GenericActionHandler<State, any>>>(actionHandlers: ActionHandlers) => ({
 

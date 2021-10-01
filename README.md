@@ -44,12 +44,12 @@ export const [
   })
   .setActions({
 
-    SIGN_IN: ({ user }) => {
-      user.authenticated = true;
+    SIGN_IN: (state) => {
+      state.user.authenticated = true;
     },
 
     SIGN_OUT: (state) => {
-      user.authenticated = false;
+      state.user.authenticated = false;
     },
 
     /**
@@ -61,7 +61,9 @@ export const [
      * If you *are* using TypeScript with "noImplicitAny" then
      * TS will appropriately warn of implied "any" type here.
      */
-    SET_THEME: (state, uiTheme: string) => ({ uiTheme })
+    SET_THEME: (state, uiTheme: string) => {
+      state.uiTheme = uiTheme;
+    }
 
   })
   .build();
@@ -136,12 +138,12 @@ Maybe you don't want a default value for every potential property on your state 
 
 type State = {
   user: {
-    username?: string,
-    admin: boolean,
-    authenticated: boolean,
-    discombobulated: boolean
-  },
-  uiTheme: "Light" | "Dark"
+    username?: string;
+    admin: boolean;
+    authenticated: boolean;
+    discombobulated: boolean;
+  };
+  uiTheme: "Light" | "Dark";
 };
 
 // ...
@@ -249,9 +251,9 @@ This module utilizes the [immer](https://immerjs.github.io/immer/) utility to ha
 
 type State = {
   user: {
-    username: string,
-    favoriteColor: string
-  }
+    username: string;
+    favoriteColor: string;
+  };
 };
 
 type User = State["user"];
@@ -303,29 +305,52 @@ For a list of all available immer utilities you visit their documentation [here]
 
 ## Wait, I can just edit the `state` variable directly in my action handlers? I thought you just said `state` was immutable?
 
-Yep, you may have noticed two patterns mixed and matched throughout these examples. Some action handlers just modify properties on the passed in `state` object while other action handlers return new objects containing the properties they intend to modify on `state`.
+Yep, the immer utility provides our action handlers with a [draft state](https://immerjs.github.io/immer/update-patterns) that acts as a proxy for the real `state`. You can modify it to your heart's content and it will not negatively effect `state` immutability. Yay!
+
+If you need to short-circuit an action simply return nothing as we did in the above example where we showed how to compare object references. By returning `void` you tell the state container that you wish to abort updating state.
 
 ```ts
-SET_USER: (state, newUser: User) => {
-  state.user = newUser;
+SET_USER_ROLE: (state, userRole: string) {
+  if (state.user.roles.includes(userRole)) return; // User has role already, abort!
 }
 ```
 
-vs
+## What happens if I return data from an action handler instead of `void`?
+
+If you return data from an action handler it is expected to be a replacement for the entire `state` object. If you're using TypeScript then the compiler will get upset if you are not returning a proper instance of your `state` object.
 
 ```ts
-SET_USER: (state, newUser: User) => {
-  return { user: newUser };
+// src/hooks/useMyStateContainer.ts
+
+type User = {
+  username: string;
+  age: number;
+  favoriteColor: string;
+  admin: boolean;
 }
+
+// ...
+
+  .setState({
+    user: {
+      username: "chev",
+      age: 34,
+      favoriteColor: "green",
+      admin: true
+    }
+  })
+  .setActions({
+
+    SWAP_USER: (state, newUser: User) => {
+      return newUser; // ERROR: user is merely a property on state and we just tried to replace state with a user object.
+      return { user: newUser }; // SUCCESS: This properly matches our state structure.
+    }
+
+  })
+  .build();
 ```
 
-Both patterns are valid. The immer utility provides our action handlers with a [draft state](https://immerjs.github.io/immer/update-patterns) that acts as a proxy for the real `state`. You can modify it to your heart's content and it will not negatively effect `state` immutability. Yay!
-
-With that said, it is still valid to return an object that represents a _partial_ `state`. The immer utility considers values returned as an overwrite of `state` but this state container module takes that value and merges it into a new object over the top of the original `state` (e.g. `Object.assign({}, oldState, newState)`). This allows for shorthand inline action handler patterns like this:
-
-```ts
-SET_USER: (state, newUser: User) => ({ user: newUser })
-```
+> IMPORTANT NOTE: While both patterns of `state` manipulation are valid, you CANNOT do both simultaneously or it will throw an error. You must either manipulate properties of `state` ***OR*** return data from your action handler. Not both.
 
 ---
 
