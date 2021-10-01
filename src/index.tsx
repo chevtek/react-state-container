@@ -2,7 +2,7 @@ import React, { useReducer, useContext, ReactNode } from "react";
 import { produce, Draft } from "immer";
 export * from "immer";
 
-type GenericActionHandler<State, Payload> = (state: State, payload: Payload) => Draft<State> | void;
+type GenericActionHandler<State, Payload> = (state: State, payload: Payload) => Draft<Partial<State>> | void;
 
 type GenericHelper<Payload> = (payload: Payload) => Promise<void> | void;
 
@@ -50,7 +50,7 @@ const buildContainer = <
     state: State,
     [type, payload]: TypePayloadPair<ActionHandlers>
   ) => {
-    const newState = produce<State>(state, draft => actionHandlers[type](draft, payload));
+    const newState = produce<Partial<State>>(state, draft => actionHandlers[type](draft as Draft<State>, payload));
     if (state === newState) return state;
     return { ...state, ...newState };
   }
