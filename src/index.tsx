@@ -1,5 +1,5 @@
 import React, { useReducer, useContext, ReactNode } from "react";
-import { produce, Draft } from "immer";
+import produce, { Draft } from "immer";
 export * from "immer";
 
 type GenericActionHandler<State, Payload> = (state: State, payload: Payload) => Draft<Partial<State>> | void;
@@ -35,7 +35,7 @@ type StateContainer<State, ActionHandlers, Helpers> = [
 ];
 
 const buildContainer = <
-  State extends {},
+  State extends Record<any, any>,
   ActionHandlers extends Record<string, GenericActionHandler<State, any>>,
   HelperFunc extends (dispatch: GenericDispatch<ActionHandlers>) => Record<string, GenericHelper<any>>
 >(name: string, initialState: State, actionHandlers: ActionHandlers, helperFunction?: HelperFunc): StateContainer<State, ActionHandlers, ReturnType<HelperFunc>> => {
@@ -79,7 +79,7 @@ const buildContainer = <
 
 const createStateContainer = (name: string) => ({
 
-  setState: <State extends {}>(initialState: State) => ({
+  setState: <State extends Record<any, any>>(initialState: State) => ({
 
     setActions: <ActionHandlers extends Record<string, GenericActionHandler<State, any>>>(actionHandlers: ActionHandlers) => ({
 
