@@ -13,6 +13,10 @@
     "preversion": "npm-run-all clean build",
     "postversion": "git push && git push --tags"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chevtek/react-state-container.git"
+  },
   "keywords": [
     "react",
     "state",
@@ -22,6 +26,7 @@
   ],
   "author": "chev@chevtek.io",
   "license": "MIT",
+  "homepage": "https://chevtek.io",
   "dependencies": {
     "immer": "^9.0.6"
   },
