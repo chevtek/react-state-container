@@ -34,14 +34,14 @@ type StateContainer<State, ActionHandlers, Helpers> = [
   }
 ];
 
-type GenericHelperFunc<ActionHandlers> = (dispatch: GenericDispatch<ActionHandlers>) => Record<string, GenericHelper<any>>;
+type GenericHelperFunc<State, ActionHandlers> = (dispatch: GenericDispatch<ActionHandlers>, state: State) => Record<string, GenericHelper<any>>;
 
 type GenericDefaultStateChangedFunc<State> = (currentState: Draft<State>, newDefaultState: State) => Draft<State> | void;
 
 const buildContainer = <
   State extends Immutable<object>,
   ActionHandlers extends Record<string, GenericActionHandler<State, any>>,
-  HelperFunc extends GenericHelperFunc<ActionHandlers>,
+  HelperFunc extends GenericHelperFunc<State, ActionHandlers>,
   DefaultStateFunc extends GenericDefaultStateChangedFunc<State>
 >(name: string, initialState: State, actionHandlers: ActionHandlers, helperFunction?: HelperFunc, defaultStateChangedFunction?: DefaultStateFunc): StateContainer<State, ActionHandlers, ReturnType<HelperFunc>> => {
 
@@ -73,7 +73,7 @@ const buildContainer = <
       reducerDispatch(["_OVERRIDE_STATE", defaultState] as any);
     }, [defaultState]);
     const dispatch: GenericDispatch<ActionHandlers> = (type, payload) => reducerDispatch([type, payload]);
-    const helpers = (helperFunction?.(dispatch) ?? {}) as ReturnType<HelperFunc>;
+    const helpers = (helperFunction?.(dispatch, state) ?? {}) as ReturnType<HelperFunc>;
     return (
       <ContainerContext.Provider value={{ state, dispatch, helpers }}>
         {children}
@@ -100,10 +100,10 @@ const createStateContainer = (name: string) => ({
     setActions: <ActionHandlers extends Record<string, GenericActionHandler<State, any>>>(actionHandlers: ActionHandlers) => {
 
       let defaultStateChangedFunction: GenericDefaultStateChangedFunc<State>;
-      let helperFunction: GenericHelperFunc<ActionHandlers>; 
+      let helperFunction: GenericHelperFunc<State, ActionHandlers>; 
       const build = () => buildContainer(name, initialState, actionHandlers, helperFunction, defaultStateChangedFunction);
 
-      function setHelpers (func: GenericHelperFunc<ActionHandlers>) {
+      function setHelpers (func: GenericHelperFunc<State, ActionHandlers>) {
         helperFunction = func;
         return {
           build,
