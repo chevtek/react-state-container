@@ -1,4 +1,4 @@
-import React, { useReducer, useContext, ReactNode } from "react";
+import React, { useReducer, useContext, useEffect, ReactNode } from "react";
 import produce, { Draft, Immutable } from "immer";
 export * from "immer";
 
@@ -34,11 +34,16 @@ type StateContainer<State, ActionHandlers, Helpers> = [
   }
 ];
 
+type GenericHelperFunc<ActionHandlers> = (dispatch: GenericDispatch<ActionHandlers>) => Record<string, GenericHelper<any>>;
+
+type GenericDefaultStateChangedFunc<State> = (currentState: Draft<State>, newDefaultState: State) => Draft<State> | void;
+
 const buildContainer = <
   State extends Immutable<object>,
   ActionHandlers extends Record<string, GenericActionHandler<State, any>>,
-  HelperFunc extends (dispatch: GenericDispatch<ActionHandlers>) => Record<string, GenericHelper<any>>
->(name: string, initialState: State, actionHandlers: ActionHandlers, helperFunction?: HelperFunc): StateContainer<State, ActionHandlers, ReturnType<HelperFunc>> => {
+  HelperFunc extends GenericHelperFunc<ActionHandlers>,
+  DefaultStateFunc extends GenericDefaultStateChangedFunc<State>
+>(name: string, initialState: State, actionHandlers: ActionHandlers, helperFunction?: HelperFunc, defaultStateChangedFunction?: DefaultStateFunc): StateContainer<State, ActionHandlers, ReturnType<HelperFunc>> => {
 
   const ContainerContext = React.createContext<{
     state: State,
@@ -49,10 +54,24 @@ const buildContainer = <
   const reducer = (
     state: State,
     [type, payload]: TypePayloadPair<ActionHandlers>
-  ) => produce(state, draft => actionHandlers[type](draft, payload));
+  ) => {
+    switch (type) {
+      case "_OVERRIDE_STATE": 
+        if (defaultStateChangedFunction) {
+          return produce(state, draft => defaultStateChangedFunction(draft, payload!));
+        }
+        return payload!;
+      default:
+        return produce(state, draft => actionHandlers[type](draft, payload));
+    }
+  };
 
   const ContainerProvider = ({ children, defaultState }: { children?: ReactNode, defaultState?: State }) => {
-    const [state, reducerDispatch] = useReducer(reducer, defaultState ?? initialState);
+    let [state, reducerDispatch] = useReducer(reducer, defaultState ?? initialState);
+    useEffect(() => {
+      if (!defaultState) return;
+      reducerDispatch(["_OVERRIDE_STATE", defaultState] as any);
+    }, [defaultState]);
     const dispatch: GenericDispatch<ActionHandlers> = (type, payload) => reducerDispatch([type, payload]);
     const helpers = (helperFunction?.(dispatch) ?? {}) as ReturnType<HelperFunc>;
     return (
@@ -73,21 +92,40 @@ const buildContainer = <
   return [ContainerProvider, useStateContainer];
 };
 
+
 const createStateContainer = (name: string) => ({
 
   setState: <State extends Immutable<object>>(initialState: State) => ({
 
-    setActions: <ActionHandlers extends Record<string, GenericActionHandler<State, any>>>(actionHandlers: ActionHandlers) => ({
+    setActions: <ActionHandlers extends Record<string, GenericActionHandler<State, any>>>(actionHandlers: ActionHandlers) => {
 
-      build: () => buildContainer(name, initialState, actionHandlers),
+      let defaultStateChangedFunction: GenericDefaultStateChangedFunc<State>;
+      let helperFunction: GenericHelperFunc<ActionHandlers>; 
+      const build = () => buildContainer(name, initialState, actionHandlers, helperFunction, defaultStateChangedFunction);
 
-      setHelpers: <HelperFunc extends (dispatch: GenericDispatch<ActionHandlers>) => Record<string, GenericHelper<any>>>(helperFunction: HelperFunc) => ({
+      function setHelpers (func: GenericHelperFunc<ActionHandlers>) {
+        helperFunction = func;
+        return {
+          build,
+          onDefaultStateChanged
+        };
+      }
 
-        build: () => buildContainer(name, initialState, actionHandlers, helperFunction)
+      function onDefaultStateChanged (func: GenericDefaultStateChangedFunc<State>) {
+        defaultStateChangedFunction = func;
+        return {
+          build,
+          setHelpers
+        };
+      }
 
-      })
+      return {
+        build,
+        onDefaultStateChanged,
+        setHelpers
+      };
 
-    })
+    }
 
   })
 
