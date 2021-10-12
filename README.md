@@ -4,9 +4,7 @@ If you're looking to steer away from Redux in favor of React's `useReducer` and 
 
 Enjoy!
 
----
-
-## Installation
+# Installation
 
 ```bash
 $ npm install @chevtek/react-state-container
@@ -18,11 +16,9 @@ or
 $ yarn install @chevtek/react-state-container
 ```
 
----
+# Basic Usage
 
-## Basic Usage
-
-### Creating the container
+## Creating the container
 
 ```ts
 // src/hooks/useMyContainer.ts
@@ -69,7 +65,7 @@ export const [
   .build();
 ```
 
-### Setup the container provider
+## Setup the container provider
 
 ```ts
 // src/App.tsx
@@ -89,7 +85,7 @@ export default function App () {
 }
 ```
 
-### Consuming the hook
+## Consuming the hook
 
 ```ts
 // src/components/Home.tsx
@@ -125,11 +121,9 @@ export default function Home () {
 }
 ```
 
----
+# Advanced Usage
 
-## Advanced Usage
-
-### What if I need more complexity in my state?
+## What if I need more complexity in my state?
 
 Maybe you don't want a default value for every potential property on your state object. Or maybe you want to constrain the potential values of a property. To accomplish this simply cast your state object to a pre-defined type :)
 
@@ -177,7 +171,7 @@ const initialState: State = {
 
 > NOTE: While it's fine to define the `state` object ahead of time rather than inline, I recommend writing your action handlers inline if you're using TypeScript because intellisense will act as a guide as you craft your actions.
 
-## What about async action helpers?
+## What about async actions?
 
 This module provides a clean way to define *helper functions*. If you're familiar with the action/reducer pattern then you probably know what a pain it can be when you want to perform the same asynchronous task over and over again. Maybe you need to fire a single action from many places in your app but each time you need to dispatch that action you have to provide it with the same data every time and that data has to be fetched asynchronously. You can make your life easier with helpers!
 
@@ -351,6 +345,177 @@ type User = {
 ```
 
 > IMPORTANT NOTE: While both patterns of `state` manipulation are valid, you CANNOT do both simultaneously or it will throw an error. You must either manipulate properties of `state` ***OR*** return data from your action handler. Not both.
+
+## Is there a way to override default state?
+
+Yes! You can pass a `defaultState` prop to the container provider and that value will override any value you provided when you called `.setState` while defining the container. In addition to that you can provide a handler that will run whenever default state changes, allowing you complete control over how your container's internal state changes.
+
+Confused? Don't worry. Let's walk through it. To start, take a look at this example:
+
+```ts
+// src/hooks/useUsers.ts
+
+import createStateContainer, { original } from "@chevtek/react-state-container";
+
+export type User = {
+  username: string;
+  admin: boolean;
+};
+
+export type State = {
+  users: User[];
+};
+
+export const [
+  UsersProvider,
+  useUsers
+] = createStateContainer("Users")
+  .setState({
+    users: []
+  } as State)
+  .setActions({
+    // ...
+  })
+  .build();
+```
+
+```ts
+// src/app.tsx
+
+import React, { useEffect } from "react";
+import axios from "axios";
+import { State, UsersProvider } from "./hooks/useMyContainer";
+
+const App = () => {
+  let state: State = {
+    users: []
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      const { data: users } = axios.get("/api/users");
+      state.users = users;
+    };
+  }, []);
+  
+  return (
+    <MyContainerProvider defaultState={state}>
+      /* rest of your app */
+    </UsersProvider>
+  )
+};
+
+export default App;
+```
+
+In this basic example we use a `useEffect` hook to fetch data **once** and then we pass that to the provider as the default state. This works great, but what if `users` changes based on data from higher up in our app? We can update our `useEffect` hook to re-fetch users when that happens.
+
+```ts
+// src/app.tsx
+
+import React, { useEffect } from "react";
+import axios from "axios";
+import { State, UsersProvider } from "./hooks/useMyContainer";
+
+const App = (props) => {
+  const { groupId } = props;
+
+  let state: State = {
+    users: []
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      const { data: users } = axios.get(`/api/group/${groupId}/users`);
+      state.users = users;
+    };
+  }, [groupId]);
+  
+  return (
+    <MyContainerProvider defaultState={state}>
+      /* rest of your app */
+    </UsersProvider>
+  )
+};
+
+export default App;
+```
+
+This will still work great, but what you may notice is that any time the `groupId` changes and new users are fetched, the state in the state container will be overridden. This is probably fine in many scenarios, but what if you're using the container to wrap the incoming data and you don't want to blow away the state when the default state changes? You can define an `onDefaultStateChanged` handler function when you're building your state container.
+
+Let's say for example that the `User` objects coming into your container don't have a `selected` property but you want to augment your container to include that metadata. You wouldn't want all your users' selected states to get reset to `undefined` when the users change. Maybe some users exist in multiple groups and you want to remember that the user selected them.
+
+```ts
+// src/hooks/useUsers.ts
+
+export type User = {
+  username: string;
+  admin: boolean;
+};
+
+export type SelectableUser = User & { selected?: boolean };
+
+export type State = {
+  users: SelectableUser[];
+};
+
+export const [
+  UsersProvider,
+  useUsers
+] = createStateContainer("Users")
+  .setState({
+    users: []
+  } as State)
+  .setActions({
+
+    SELECT_USER: (state, userToSelect) => {
+      const user = state.users.find(user => user.username === userToSelect.username);
+      user.selected = true;
+    },
+
+    DESELECT_USER: (state, userToDeselect) => {
+      const user = state.users.find(user => user.username === userToDeselect.username);
+      user.selected = false;
+    }
+
+  })
+  .onDefaultStateChanged((currentState, incomingState) => {
+
+    // Filter out any users that no longer exist.
+    const usernames = incomingState.users.map(user => user.username);
+    currentState.users = currentState.users.filter(user => usernames.includes(user.username));
+
+    // Add new users and update existing users.
+    for (const userUpdate of incomingState.users) {
+      const existingUser = currentState.users.find(user => user.username === userupdate.username);
+      if (!existingUser) {
+        currentState.users.push(userUpdate);
+        continue;
+      }
+      Object.assign(existingUser, userUpdate);
+    }
+
+  })
+  .build();
+```
+
+Notice that this handler works exactly like an action handler, except that the payload will always be a full state object. Just like with regular action handlers we update state by mutating it in place, hence why we call `Object.assign` and simply pass the existing user as the first argument.
+
+> NOTE: For complex objects you might want to a deep merge with something like [lodash's merge utility](https://lodash.com/docs/4.17.15#merge).
+> 
+> _.merge(existingUser, userUpdate);
+
+The `userUpdate` objects won't have our optional `selected` property which means `selected` will be undefined on the incoming users array. This allows us to simply merge the updated user properties over the top of any existing users, while preserving any existing `selected` properties already in state.
+
+Any time our array of users changes we now have total control over how those changes are applied to the internal state of our container.
+
+## What if I don't want container state to update at all, even if the default state changes?
+
+Simply handle the `onDefaultStateChanged` by returning nothing. A simple no-op function will do the trick.
+
+```ts
+  .onDefaultStateChanged(() => {})
+```
 
 ---
 
