@@ -380,7 +380,7 @@ export const [
 ```
 
 ```ts
-// src/app.tsx
+// src/App.tsx
 
 import React, { useEffect } from "react";
 import axios from "axios";
@@ -399,7 +399,7 @@ const App = () => {
   }, []);
   
   return (
-    <MyContainerProvider defaultState={state}>
+    <UsersProvider defaultState={state}>
       /* rest of your app */
     </UsersProvider>
   )
@@ -411,7 +411,7 @@ export default App;
 In this basic example we use a `useEffect` hook to fetch data **once** and then we pass that to the provider as the default state. This works great, but what if `users` changes based on data from higher up in our app? We can update our `useEffect` hook to re-fetch users when that happens.
 
 ```ts
-// src/app.tsx
+// src/App.tsx
 
 import React, { useEffect } from "react";
 import axios from "axios";
@@ -432,7 +432,7 @@ const App = (props) => {
   }, [groupId]);
   
   return (
-    <MyContainerProvider defaultState={state}>
+    <UsersProvider defaultState={state}>
       /* rest of your app */
     </UsersProvider>
   )
