@@ -468,12 +468,12 @@ export const [
   } as State)
   .setActions({
 
-    SELECT_USER: (state, userToSelect) => {
+    SELECT_USER: (state, userToSelect: SelectableUser) => {
       const user = state.users.find(user => user.username === userToSelect.username);
       user.selected = true;
     },
 
-    DESELECT_USER: (state, userToDeselect) => {
+    DESELECT_USER: (state, userToDeselect: SelectableUser) => {
       const user = state.users.find(user => user.username === userToDeselect.username);
       user.selected = false;
     }
