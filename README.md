@@ -501,9 +501,9 @@ export const [
 
 Notice that this handler works exactly like an action handler, except that the payload will always be a full state object. Just like with regular action handlers we update state by mutating it in place, hence why we call `Object.assign` and simply pass the existing user as the first argument.
 
-> NOTE: For complex objects you might want to a deep merge with something like [lodash's merge utility](https://lodash.com/docs/4.17.15#merge).
+> NOTE: For complex objects you might want to do a deep merge with something like [lodash's merge utility](https://lodash.com/docs/4.17.15#merge).
 > 
-> _.merge(existingUser, userUpdate);
+> `_.merge(existingUser, userUpdate);`
 
 The `userUpdate` objects won't have our optional `selected` property which means `selected` will be undefined on the incoming users array. This allows us to simply merge the updated user properties over the top of any existing users, while preserving any existing `selected` properties already in state.
 
