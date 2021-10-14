@@ -1,6 +1,6 @@
 {
   "name": "@chevtek/react-state-container",
-  "version": "6.0.3",
+  "version": "6.0.4",
   "description": "A simple utility for building state container hooks in React.",
   "files": [
     "/dist"
