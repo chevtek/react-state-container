@@ -344,7 +344,7 @@ type User = {
   .build();
 ```
 
-> IMPORTANT NOTE: While both patterns of `state` manipulation are valid, you CANNOT do both simultaneously or it will throw an error. You must either manipulate properties of `state` ***OR*** return data from your action handler. Not both.
+> IMPORTANT NOTE: While both patterns of `state` manipulation are valid, you CANNOT do both simultaneously or it will throw an error. You must either manipulate properties of `state` ***OR*** return a complete state replacement from your action handler. Not both.
 
 ## Is there a way to override default state?
 
